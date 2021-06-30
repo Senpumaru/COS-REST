@@ -90,7 +90,10 @@ TEMPLATES = [
 
 WSGI_APPLICATION = "Backend.wsgi.application"
 
-CORS_ORIGIN_ALLOW_ALL = True
+CORS_ALLOWED_ORIGINS = [
+    "https://acs-project-8358d.firebaseapp.com",
+    "https://acs-project-8358d.web.app",
+]
 
 
 # Database
