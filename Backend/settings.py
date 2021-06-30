@@ -59,6 +59,7 @@ MIDDLEWARE = [
     "corsheaders.middleware.CorsMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
+    'corsheaders.middleware.CorsPostCsrfMiddleware',
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
@@ -95,6 +96,17 @@ CORS_ALLOWED_ORIGINS = [
     "https://acs-project-8358d.web.app",
 ]
 
+CORS_ALLOW_CREDENTIALS = True
+
+CORS_ORIGIN_WHITELIST = [
+    "https://acs-project-8358d.firebaseapp.com",
+    "https://acs-project-8358d.web.app",
+]
+
+CSRF_TRUSTED_ORIGINS = [
+    "https://acs-project-8358d.firebaseapp.com",
+    "https://acs-project-8358d.web.app",
+]
 
 # Database
 # https://docs.djangoproject.com/en/3.2/ref/settings/#databases
