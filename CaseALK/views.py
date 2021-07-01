@@ -122,7 +122,7 @@ class CaseTransfer(APIView):
 
         case = Case.objects.get(uuid=data["uuid"])
 
-        serialized_data = {"user_transfer": data["userTransfer"]}
+        serialized_data = {"case_assistant": data["caseAssistant"]}
         serializer = CaseTransferSerializer(case, data=serialized_data, many=False)
 
         if serializer.is_valid():
@@ -180,10 +180,16 @@ class CaseUpdate(APIView):
         creator = False
         editor = False
 
-        if user_data["id"] == case_former_data["case_editor"]["id"]:
-            editor = True
-        elif user_data["id"] == case_former_data["case_creator"]["id"]:
-            creator = True
+        if case_former_data["case_editor"]:
+            if user_data["id"] == case_former_data["case_editor"]["id"]:
+                editor = True
+            else:
+                editor = False
+        elif case_former_data["case_creator"] or case_former_data["case_assistant"]:
+            if user_data["id"] == case_former_data["case_creator"]["id"] or user_data["id"] == case_former_data["case_assistant"]["id"]:
+                creator = True
+            else:
+                creator = False
         else:
             creator = False
 
@@ -194,7 +200,8 @@ class CaseUpdate(APIView):
         elif editor == True:
             serialized_data.update({"date_of_report": data["dateReport"].split("T")[0]})
             serialized_data.update({"microscopic_description": data["microscopicDescription"]})
-            serialized_data.update({"conclusion": data["caseConclusion"]})
+            serialized_data.update({"histological_description": data["histologicalDescription"]})
+            serialized_data.update({"staining_pattern": data["stainingPattern"]})
             serialized_data.update({"clinical_interpretation": data["clinicalInterpretation"]})
             case_updated_serializer = CaseEditorUpdateSerializer(case_former, data=serialized_data, many=False)
         else:
@@ -264,10 +271,12 @@ class CaseReview(APIView):
         case_review.save()
 
         consultants = data["case_consultants"]
-        data["case_consultants"] = [d['id'] for d in data["case_consultants"]]
+        data["case_consultants"] = []
         data["version"] = float(data["version"]) + 1
         data["version_state"] = True
         data["case_creator"] = data["case_creator"]["id"]
+        if data["case_assistant"]:
+            data["case_assistant"] = data["case_assistant"]["id"]
         data["case_editor"] = data["case_editor"]["id"]
         
         case_blueprint_serializer = CaseReviewSerializer(data=data, many=False)
@@ -276,13 +285,13 @@ class CaseReview(APIView):
             
 
              ## Consultants approval instances - New
-            for consultant in consultants:
-                case_approval_data = {"case": case_blueprint.id, "consultant": consultant["id"], "approval": True}
-                case_approval_serializer = CaseApprovalCreateSerializer(data=case_approval_data)
-                if case_approval_serializer.is_valid():
-                    case_approval_serializer.save()
-                else:
-                    return Response(case_approval_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            # for consultant in consultants:
+            #     case_approval_data = {"case": case_blueprint.id, "consultant": consultant["id"], "approval": True}
+            #     case_approval_serializer = CaseApprovalCreateSerializer(data=case_approval_data)
+            #     if case_approval_serializer.is_valid():
+            #         case_approval_serializer.save()
+            #     else:
+            #         return Response(case_approval_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
             return Response(case_blueprint_serializer.data, status=status.HTTP_201_CREATED)
         else:
             return Response(case_blueprint_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -318,7 +327,7 @@ class CaseListServer(generics.ListAPIView):
         "date_of_registration",
         "institution",
         "date_of_response",
-        "case_conclusion",
+        "staining_pattern",
     ]
     ordering = ["date_of_registration"]
 
@@ -341,7 +350,7 @@ class UserCaseViewServer(APIView):
         "date_of_registration",
         "institution",
         "date_of_response",
-        "case_conclusion",
+        "staining_pattern",
     ]
     ordering = ["date_of_registration"]
 
@@ -355,7 +364,7 @@ class UserCaseViewServer(APIView):
 ## Statistics ##
 class CaseStatistics(APIView):
     """
-    Statistics of a case instance.
+    Statistics for cases.
     """
 
     permission_classes = [AccessST0001]
@@ -372,51 +381,56 @@ class CaseStatistics(APIView):
 
         cases = Case.objects.all()
         cases_count = cases.count()
-        cases_transfer_required = Case.objects.filter(
-            user_creator__is_clinician=True
-        ).count()
-        cases_in_work = cases.filter(clin_interpretation="Не указано").count()
-        cases_done = cases.filter(~Q(clin_interpretation="Не указано")).count()
+        cases_transfer_required = Case.objects.filter(case_creator__is_clinician=True).count()
+        cases_in_work = cases.filter(clinical_interpretation="Не указано").count()
+        
+        ### Statistics ###
+        ## All-Time
+        ## Group by institution
+        # SQL
+        cursor.execute(
+            """
+            SELECT institution_code, clinical_interpretation, COUNT(institution_code) 
+            FROM "ST0001 Case"
+            GROUP BY institution_code, clinical_interpretation;
+            """
+        )
+        result = cursor.fetchall()
+        print(result)
+        # Pandas
+        df = pd.DataFrame(result, columns=["Code", "State", "Count"])
+        df["State"] = df["State"].fillna(value="No answer")
+        df = df.pivot(index="Code", columns="State", values="Count").fillna(0)        
+        print(df)
+        # Statistics
+        statistics = df.to_dict(orient="records")
+        
+        
+        ## Current month
         ## Group by institution
         cursor.execute(
             """
-            SELECT institution_code, clin_interpretation, COUNT(institution_code) 
-            FROM "ST0001 Case"
-            GROUP BY institution_code, clin_interpretation;
-            """
-        )
-        result = cursor.fetchall()
-        df = pd.DataFrame(result, columns=["Code", "State", "Count"])
-        df = df.pivot(index="State", columns="Code", values="Count").fillna(0)
-
-        statistics = df.to_dict("index")
-
-        ## Group by institution (Current Date)
-        cursor.execute(
-            """
-            SELECT institution_code, clin_interpretation, COUNT(institution_code) 
+            SELECT institution_code, clinical_interpretation, COUNT(institution_code) 
             FROM "ST0001 Case"
             WHERE date_of_registration >= date_trunc('month', CURRENT_DATE)
-            GROUP BY institution_code, clin_interpretation;
+            GROUP BY institution_code, clinical_interpretation;
             """
         )
         result = cursor.fetchall()
         df = pd.DataFrame(result, columns=["Code", "State", "Count"])
         df = df.pivot(index="State", columns="Code", values="Count").fillna(0)
-        
-
         statistics_current = df.to_dict("index")
 
         return Response(
             {
                 "statistics": statistics,
-                "statistics_current": statistics_current,
-                "case_states": df.index.values,
+                # "statistics_current": statistics_current,
+                # "case_states": df.index.values,
                 # Summary
-                "cases_count": cases_count,
-                "cases_transfer_required": cases_transfer_required,
-                "cases_in_work": cases_in_work,
-                "cases_done": cases_done,
+                # "cases_count": cases_count,
+                # "cases_transfer_required": cases_transfer_required,
+                # "cases_in_work": cases_in_work,
+                
             },
         )
 
@@ -461,14 +475,15 @@ def case_pdf_report(request, uuid):
         buffer=buffer,
         # Registration Data
         date_of_registration=str(case.date_of_registration),
-        order_number=case.order_number,
+        case_code=case.case_code,
         block_codes=case.block_codes,
         diagnosis=case.diagnosis,
         case_sender=case.case_sender,
         # Report Data
         date_of_report=str(case.date_of_report),
         microscopic_description=case.microscopic_description,
-        conclusion=case.conclusion,
+        histological_description=case.histological_description,
+        staining_pattern=case.staining_pattern,
         clinical_interpretation=case.clinical_interpretation,
     )
     buffer.seek(0)

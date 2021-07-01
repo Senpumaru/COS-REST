@@ -37,6 +37,7 @@ class CaseCreateSerializer(serializers.ModelSerializer):
         validators = [
             UniqueTogetherValidator(queryset=Case.objects.all(), fields=["institution_code", "order_number", "version"])
         ]
+
 # Create #
 class CaseReviewSerializer(serializers.ModelSerializer):
     institution_code = serializers.CharField(required=True)
@@ -63,11 +64,11 @@ class CaseReviewSerializer(serializers.ModelSerializer):
             "case_consultants",
             "version",
             "version_state",
-            
             ## Report Data ##
             "date_of_report",
             "microscopic_description",
-            "conclusion",
+            "histological_description",
+            "staining_pattern",
             "clinical_interpretation", 
            ## Miscellaneous ##
             "case_creator",
@@ -124,7 +125,8 @@ class CaseDetailsSerializer(serializers.ModelSerializer):
             ## Report Data ##
             "date_of_report",
             "microscopic_description",
-            "conclusion",
+            "histological_description",
+            "staining_pattern",
             "clinical_interpretation",
             ## Approvals ##
             "case_approvals",
@@ -192,7 +194,8 @@ class CaseEditorUpdateSerializer(serializers.ModelSerializer):
             ## Report Data ##
             "date_of_report",
             "microscopic_description",
-            "conclusion",
+            "histological_description",
+            "staining_pattern",
             "clinical_interpretation", 
         ]
 
@@ -207,6 +210,7 @@ class CaseApprovalCreateSerializer(serializers.ModelSerializer):
         model = Approval
         fields = ["case", "consultant", "approval", "text"]
 
+### Case & Approval ###
 # List #
 class CaseListSerializer(serializers.ModelSerializer):
     institution = serializers.SerializerMethodField()
@@ -240,7 +244,8 @@ class CaseListSerializer(serializers.ModelSerializer):
             ## Report Data ##
             "date_of_report",
             "microscopic_description",
-            "conclusion",
+            "histological_description",
+            "staining_pattern",
             "clinical_interpretation",
             ## Approvals ##
             "case_approvals",

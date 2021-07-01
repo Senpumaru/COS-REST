@@ -1,6 +1,6 @@
 def Report(
     buffer,
-    order_number,
+    case_code,
     date_of_registration,
     diagnosis,
     block_codes,
@@ -8,7 +8,8 @@ def Report(
     # Case Data
     date_of_report,
     microscopic_description,
-    conclusion,
+    histological_description,
+    staining_pattern,
     clinical_interpretation,
 ):
 
@@ -72,7 +73,7 @@ def Report(
     )
     SUMMARY = [
         ["Номер протокола:", "BO 40336"],
-        ["Идентификатор:", order_number],
+        ["Идентификатор:", case_code],
         ["Дата получения материала:", date_of_registration],
         ["Диагноз (направительный):", diagnosis],
         ["№ гистологического исследования:", " ".join(block_codes)],
@@ -81,7 +82,7 @@ def Report(
 
     MICRO_CHAR = ["Микроскопическое описание:", "\n".join(wrap(microscopic_description, 98))]
     
-    CONCLUSION = ["Заключение:", "\n".join(wrap(conclusion, 98))]
+    CONCLUSION = ["Заключение:", "\n".join(wrap(histological_description, 95))]
     RESEARCH = [
         "Иммуногистохимическое исследование с моноклональным антителом к ALK (клон D5F3):",
         [
@@ -99,7 +100,7 @@ def Report(
         ],
         [
             "Исследуемый образец",
-            "Гранулярное цитоплазматическое\nокрашивание опухолевых клеток высокой\nинтенсивности не определяется.",
+            "\n".join(wrap(staining_pattern, 50))
         ],
     ]
     
@@ -214,13 +215,13 @@ def Report(
                 ("FONT", (1, 1), (1, -1), "Verdana", 8),
                 ("ALIGN", (0, 0), (0, 0), "CENTER"),
                 ("VALIGN", (0, 1), (0, -1), "MIDDLE"),
-                ("RIGHTPADDING", (1, 1), (1, -1), 80),
+                ("RIGHTPADDING", (1, 1), (1, -1), 30),
                 ("SPAN", (1, 0), (0, 0)),
                 ("GRID", (0, 0), (-1, -1), 1, colors.black),
             ]
         )
     )
-    table.wrapOn(pdf, 100, 500)
+    table.wrapOn(pdf, 100, 400)
     table.drawOn(pdf, LEFT_LINE, 410)
 
     # Interpretation

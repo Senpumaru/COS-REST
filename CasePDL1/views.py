@@ -101,7 +101,7 @@ class CaseUpdate(APIView):
             "date_of_response": data["date_of_response"],
             "doctor_sender": data["doctor_sender"],
             "micro_desc": data["micro_desc"],
-            "case_conclusion": data["case_conclusion"],
+            "staining_pattern": data["staining_pattern"],
             "clin_interpretation": data["clin_interpretation"],
         }
 

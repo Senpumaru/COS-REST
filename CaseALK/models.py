@@ -124,19 +124,25 @@ class Case(models.Model):
         null=True,
         blank=True,
     )
-    CASE_CHOICES = [
+    histological_description = models.TextField(
+        verbose_name="Histological Description",
+        max_length=1000,
+        null=True,
+        blank=True,
+    )
+    STAINING_CHOICES = [
         (
-            "Гранулярность не определяется",
+            "Гранулярное цитоплазматическое окрашивание опухолевых клеток высокой интенсивности не определяется",
             """Гранулярное цитоплазматическое окрашивание опухолевых клеток высокой интенсивности не определяется""",
         ),
         (
-            "Окрашивание высокой интенсивности",
+            "В большинстве опухолевых клеток определяется гранулярное цитоплазматическое окрашивание высокой интенсивности",
             """В большинстве опухолевых клеток определяется гранулярное цитоплазматическое окрашивание высокой интенсивности""",
         ),
     ]
-    conclusion = models.CharField(
-        verbose_name="Conclusion",
-        choices=CASE_CHOICES,
+    staining_pattern = models.CharField(
+        verbose_name="Staining pattern",
+        choices=STAINING_CHOICES,
         max_length=300,
         null=True,
         blank=True,
