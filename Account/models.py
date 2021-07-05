@@ -47,77 +47,33 @@ class ServiceUser(AbstractUser):
     username = None
     email = models.EmailField(_("Email Address"), unique=True)
     ## Backend Specific Rights ##
-    # Credential types
-    is_guest = models.BooleanField(
-        verbose_name="Guest Status",
-        default=True,
-        help_text="Designates basic permissions for guests's access.",
-    )
-    is_registrator = models.BooleanField(
-        verbose_name="Registrator Status",
-        default=False,
-        help_text="Designates  permissions for registrator's access.",
-    )
-    is_consultant = models.BooleanField(
-        verbose_name="Consultant Status",
-        default=False,
-        help_text="Designates permissions for consultant's access.",
-    )
-    is_clinician = models.BooleanField(
-        verbose_name="Clinician Status",
-        default=False,
-        help_text="Designates permissions for clinician's access.",
-    )
-    is_pathologist = models.BooleanField(
-        verbose_name="Pathologist Status",
-        default=False,
-        help_text="Designates elevated permissions for pathologist's access.",
-    )
+
     # App types
-    ST0001_allow = models.BooleanField(
+    ST1010_allow = models.BooleanField(
         verbose_name="Application for IHC:ALK cases",
         default=False,
-        help_text="Gives access to ST0001 application.",
+        help_text="Gives access to ST1010 application.",
     )
     ST0002_allow = models.BooleanField(
         verbose_name="Application for IHC:PDL1 cases",
         default=False,
         help_text="Gives access to ST0002 application.",
     )
-    
+
     ## Frontend Specific Rights ##
-        
-    @property
-    def credentials_status(self):
-        "Class granted by admin."
-        credential_stati = {}
-        if self.is_guest == True:
-            credential_stati["Guest"] = True
-        if self.is_registrator == True:
-            credential_stati["Registrator"] = True
-        if self.is_consultant == True:
-            credential_stati["Consultant"] = True
-        if self.is_clinician == True:
-            credential_stati["Clinician"] = True
-        if self.is_pathologist == True:
-            credential_stati["Pathologist"] = True
-        if self.is_staff == True:
-            credential_stati["Staff"] = True
-        return credential_stati
-    
+
     @property
     def application_rights(self):
         apps = {
-            "ST0001":False,
-            "ST0002":False,
+            "ST1010": False,
+            "ST1011": False,
         }
-        if self.ST0001_allow == True:
-            apps["ST0001"] = True
+        if self.ST1010_allow == True:
+            apps["ST1010"] = True
         if self.ST0002_allow == True:
-            apps["ST0002"] = True
+            apps["ST1011"] = True
         return apps
-    
-    
+
     USERNAME_FIELD = "email"
     REQUIRED_FIELDS = []
 

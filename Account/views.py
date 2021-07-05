@@ -112,6 +112,7 @@ def getUserProfile(request):
 
 # Search User
 
+
 class UserViewSetByName(generics.ListAPIView):
     queryset = ServiceUser.objects.all()
     serializer_class = UserSerializer
@@ -120,14 +121,16 @@ class UserViewSetByName(generics.ListAPIView):
 
 
 class UserViewConsultants(generics.ListAPIView):
-    queryset = ServiceUser.objects.filter(is_consultant=True)
+    queryset = ServiceUser.objects.all()
     serializer_class = UserSerializer
     filter_backends = [filters.SearchFilter]
-    
+
+
 class UserViewPathologists(generics.ListAPIView):
-    queryset = ServiceUser.objects.filter(is_pathologist=True)
+    queryset = ServiceUser.objects.filter()
     serializer_class = UserSerializer
     filter_backends = [filters.SearchFilter]
+
 
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])

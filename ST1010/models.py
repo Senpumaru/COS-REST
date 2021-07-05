@@ -12,6 +12,67 @@ from django.utils.timezone import now
 from model_utils import Choices
 
 
+class Permission(models.Model):
+    user = models.OneToOneField(
+        to=ServiceUser,
+        related_name="ST1010_Permission",
+        on_delete=models.CASCADE,
+        null=True,
+        blank=False,
+    )
+    # Credential types
+    guest = models.BooleanField(
+        verbose_name="Guest Status",
+        default=True,
+        help_text="ST1010 permissions for Guests's access.",
+    )
+    registrar = models.BooleanField(
+        verbose_name="Registrar Status",
+        default=False,
+        help_text="ST1010 permissions for Registrar's access.",
+    )
+    consultant = models.BooleanField(
+        verbose_name="Consultant Status",
+        default=False,
+        help_text="ST1010 permissions for Consultant's access.",
+    )
+    clinician = models.BooleanField(
+        verbose_name="Clinician Status",
+        default=False,
+        help_text="ST1010 permissions for Clinician's access.",
+    )
+    pathologist = models.BooleanField(
+        verbose_name="Pathologist Status",
+        default=False,
+        help_text="ST1010 elevated permissions for Pathologist's access.",
+    )
+
+    def __str__(self):
+        return " ".join([self.user.first_name, self.user.last_name, "(" + self.user.email + ")"])
+
+    class Meta:
+        db_table = "ST1010 Permission"
+        verbose_name_plural = "ST1010 Permissions"
+
+    @property
+    def credentials_status(self):
+        "Class granted by admin."
+        credential_stati = {}
+        if self.guest == True:
+            credential_stati["Guest"] = True
+        if self.registrar == True:
+            credential_stati["Registrar"] = True
+        if self.consultant == True:
+            credential_stati["Consultant"] = True
+        if self.clinician == True:
+            credential_stati["Clinician"] = True
+        if self.pathologist == True:
+            credential_stati["Pathologist"] = True
+        if self.is_staff == True:
+            credential_stati["Staff"] = True
+        return credential_stati
+
+
 class Case(models.Model):
     id = models.BigAutoField(primary_key=True)
 
@@ -91,13 +152,13 @@ class Case(models.Model):
     case_editor = models.ForeignKey(
         on_delete=models.CASCADE,
         to=ServiceUser,
-        related_name="CaseEditorST0001",
+        related_name="CaseEditorST1010",
         null=True,
         blank=True,
     )
     case_consultants = models.ManyToManyField(
         to=ServiceUser,
-        related_name="CaseConsultantsST0001",
+        related_name="CaseConsultantsST1010",
         default=[],
         blank=True,
     )
@@ -200,7 +261,7 @@ class Case(models.Model):
 
     @property
     def case_code(self):
-        property = str(self.institution_code) + "-" + str(self.order_number) 
+        property = str(self.institution_code) + "-" + str(self.order_number)
         return property
 
     def __str__(self) -> str:
@@ -229,10 +290,11 @@ class Delivery(models.Model):
         null=True,
         blank=True,
     )
+
     class Meta:
         db_table = "ST1010 Case Delivery"
         verbose_name_plural = "ST1010 Case Deliveries"
-        
+
 
 class Approval(models.Model):
     case = models.ForeignKey(
