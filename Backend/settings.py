@@ -46,8 +46,8 @@ INSTALLED_APPS = [
     "rest_framework",
     # 1st Party Apps
     "Account",
-    "CaseALK",
-    "CasePDL1",
+    "ST1010",
+    "ST1011",
 ]
 
 MIDDLEWARE = [
