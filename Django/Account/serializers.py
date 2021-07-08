@@ -1,20 +1,25 @@
+from os import read
+
 from django.db.models import fields
 from rest_framework import serializers
 from rest_framework.fields import ReadOnlyField
 from rest_framework_simplejwt.tokens import RefreshToken
 
-from .models import ServiceUser
+from .models import ST1010_Permission, ServiceUser
+
+
+class PermissionSerializerST1010(serializers.ModelSerializer):
+    class Meta:
+        model = ST1010_Permission
+        fields = ["guest", "registrar", "consultant", "clinician", "pathologist"]
 
 
 class UserSerializer(serializers.ModelSerializer):
+    ST1010_Permission = PermissionSerializerST1010(read_only=True, many=False)
+
     class Meta:
         model = ServiceUser
-        fields = [
-            "id",
-            "first_name",
-            "last_name",
-        ]
-        depth = 1
+        fields = ["id", "first_name", "last_name", "ST1010_Permission"]
 
 
 class UserSerializerWithToken(UserSerializer):

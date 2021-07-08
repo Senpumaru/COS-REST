@@ -1,6 +1,4 @@
-from uuid import uuid4
-from .models import Permission, ServiceUser
-from Account.serializers import UserSerializer, UserSerializerWithToken
+from Account.serializers import PermissionSerializerST1010, UserSerializer
 from django.db.models import Q
 from django.shortcuts import render
 from django_filters.rest_framework import DjangoFilterBackend
@@ -11,6 +9,7 @@ from rest_framework import viewsets
 from rest_framework import status
 from django.http import FileResponse
 from ST1010.models import Approval, Case, CaseArchive
+from Account.models import ST1010_Permission
 from ST1010.serializers import (
     CaseArchiveCreateSerializer,
     CaseArchiveListSerializer,
@@ -23,7 +22,6 @@ from ST1010.serializers import (
     CaseTransferSerializer,
     CaseCreatorUpdateSerializer,
     CaseListSerializer,
-    PermissionSerializer,
     ProfileListSerializer,
 )
 from ST1010.filters import CaseFilter
@@ -48,21 +46,24 @@ from datetime import datetime
 
 ### Permission ###
 class ProfileView(APIView):
-    # permission_classes = [AccessST1010]
-
     def get(self, request, id, format=None):
-        permission = Permission.objects.get(user=id)
-        serializer_class = PermissionSerializer(permission, many=False)
-        return Response(serializer_class.data)
+        try:
+            permission = ST1010_Permission.objects.get(user=id)
+            serializer_class = PermissionSerializerST1010(permission, many=False)
+            return Response(serializer_class.data)
+        except:
+            return Response(
+                {"detail": "You do not have permissions for this applications, contact staff to acquire credentials."}
+            )
 
 
 class ProfilePathologistList(generics.ListAPIView):
-    queryset = Permission.objects.filter(pathologist=True)
+    queryset = ST1010_Permission.objects.filter(pathologist=True)
     serializer_class = ProfileListSerializer
 
 
 class ProfileConsultantList(generics.ListAPIView):
-    queryset = Permission.objects.filter(consultant=True)
+    queryset = ST1010_Permission.objects.filter(consultant=True)
     serializer_class = ProfileListSerializer
 
 
@@ -379,7 +380,7 @@ class CaseArchiveList(generics.ListAPIView):
     # permission_classes = [AccessST1010]
 
     def get(self, request, code, number, format=None):
-        queryset = Case.objects.filter(~Q(version_state=True), institution_code=code, order_number=number)
+        queryset = Case.objects.filter(~Q(version_state="In-progress"), institution_code=code, order_number=number)
         serializer_class = CaseListSerializer(queryset, many=True)
         return Response(serializer_class.data)
 
@@ -437,6 +438,7 @@ class UserCaseViewServer(APIView):
 
         queryset = Case.objects.filter(user_creator=request.user)
         serializer = CaseListSerializer(queryset, many=True)
+
         return Response(serializer.data)
 
 
@@ -475,12 +477,12 @@ class CaseStatistics(APIView):
             """
         )
         result = cursor.fetchall()
-        print(result)
+
         # Pandas
         df = pd.DataFrame(result, columns=["Code", "State", "Count"])
         df["State"] = df["State"].fillna(value="No answer")
         df = df.pivot(index="Code", columns="State", values="Count").fillna(0)
-        print(df)
+
         # Statistics
         statistics = df.to_dict(orient="records")
 

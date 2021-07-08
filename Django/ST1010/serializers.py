@@ -2,23 +2,20 @@ from os import read
 from django.contrib.postgres import fields
 from rest_framework import serializers
 from rest_framework.validators import UniqueTogetherValidator
-from Account.serializers import UserSerializerWithToken
-from ST1010.models import Approval, Case, CaseArchive, Permission
+
+from ST1010.models import Approval, Case, CaseArchive
+from Account.models import ST1010_Permission
 from ST1010.filters import CaseFilter
-from Account.serializers import UserSerializer, UserSerializerWithToken
+from Account.serializers import UserSerializer
 
 ### Profile ###
-class PermissionSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Permission
-        fields = ["guest", "registrar", "consultant", "clinician", "pathologist"]
 
 
 class ProfileListSerializer(serializers.ModelSerializer):
     user = UserSerializer(read_only=True, many=False)
 
     class Meta:
-        model = Permission
+        model = ST1010_Permission
         fields = ["user", "guest", "registrar", "consultant", "clinician", "pathologist"]
 
 
@@ -261,6 +258,7 @@ class CaseListSerializer(serializers.ModelSerializer):
     version = serializers.IntegerField()
 
     case_creator = UserSerializer(read_only=True, many=False)
+
     case_assistant = UserSerializer(read_only=True, many=False)
     case_approvals = CaseApprovalUpdateSerializer(read_only=True, many=True)
 

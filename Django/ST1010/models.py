@@ -12,67 +12,6 @@ from django.utils.timezone import now
 from model_utils import Choices
 
 
-class Permission(models.Model):
-    user = models.OneToOneField(
-        to=ServiceUser,
-        related_name="ST1010_Permission",
-        on_delete=models.CASCADE,
-        null=True,
-        blank=False,
-    )
-    # Credential types
-    guest = models.BooleanField(
-        verbose_name="Guest Status",
-        default=True,
-        help_text="ST1010 permissions for Guests's access.",
-    )
-    registrar = models.BooleanField(
-        verbose_name="Registrar Status",
-        default=False,
-        help_text="ST1010 permissions for Registrar's access.",
-    )
-    consultant = models.BooleanField(
-        verbose_name="Consultant Status",
-        default=False,
-        help_text="ST1010 permissions for Consultant's access.",
-    )
-    clinician = models.BooleanField(
-        verbose_name="Clinician Status",
-        default=False,
-        help_text="ST1010 permissions for Clinician's access.",
-    )
-    pathologist = models.BooleanField(
-        verbose_name="Pathologist Status",
-        default=False,
-        help_text="ST1010 elevated permissions for Pathologist's access.",
-    )
-
-    def __str__(self):
-        return " ".join([self.user.first_name, self.user.last_name, "(" + self.user.email + ")"])
-
-    class Meta:
-        db_table = "ST1010 Permission"
-        verbose_name_plural = "ST1010 Permissions"
-
-    @property
-    def credentials_status(self):
-        "Class granted by admin."
-        credential_stati = {}
-        if self.guest == True:
-            credential_stati["Guest"] = True
-        if self.registrar == True:
-            credential_stati["Registrar"] = True
-        if self.consultant == True:
-            credential_stati["Consultant"] = True
-        if self.clinician == True:
-            credential_stati["Clinician"] = True
-        if self.pathologist == True:
-            credential_stati["Pathologist"] = True
-        if self.is_staff == True:
-            credential_stati["Staff"] = True
-        return credential_stati
-
-
 class CaseArchive(models.Model):
     id = models.BigAutoField(primary_key=True)
     uuid = models.UUIDField(
