@@ -1,12 +1,31 @@
+from os import read
+from django.contrib.postgres import fields
 from rest_framework import serializers
 from rest_framework.validators import UniqueTogetherValidator
-from ST1010.models import Approval, Case
+from Account.serializers import UserSerializerWithToken
+from ST1010.models import Approval, Case, CaseArchive, Permission
 from ST1010.filters import CaseFilter
-from Account.serializers import UserSerializer
+from Account.serializers import UserSerializer, UserSerializerWithToken
+
+### Profile ###
+class PermissionSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Permission
+        fields = ["guest", "registrar", "consultant", "clinician", "pathologist"]
+
+
+class ProfileListSerializer(serializers.ModelSerializer):
+    user = UserSerializer(read_only=True, many=False)
+
+    class Meta:
+        model = Permission
+        fields = ["user", "guest", "registrar", "consultant", "clinician", "pathologist"]
+
 
 ### Case ###
 # Create #
 class CaseCreateSerializer(serializers.ModelSerializer):
+    # archive = serializers.PrimaryKeyRelatedField(required=False, read_only=True)
     institution_code = serializers.CharField(required=True)
     order_number = serializers.IntegerField(required=True)
     case_sender = serializers.CharField(required=False, allow_null=True)
@@ -17,6 +36,7 @@ class CaseCreateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Case
         fields = [
+            "archive",
             ## Registration Data ##
             "date_of_registration",
             "institution_code",
@@ -38,8 +58,10 @@ class CaseCreateSerializer(serializers.ModelSerializer):
             UniqueTogetherValidator(queryset=Case.objects.all(), fields=["institution_code", "order_number", "version"])
         ]
 
-# Create #
-class CaseReviewSerializer(serializers.ModelSerializer):
+
+# Addendum #
+# Required for case duplication
+class CaseAddendumSerializer(serializers.ModelSerializer):
     institution_code = serializers.CharField(required=True)
     order_number = serializers.IntegerField(required=True)
     case_sender = serializers.CharField(required=False, allow_null=True)
@@ -50,6 +72,7 @@ class CaseReviewSerializer(serializers.ModelSerializer):
     class Meta:
         model = Case
         fields = [
+            "case_archive",
             ## Registration Data ##
             "date_of_registration",
             "institution_code",
@@ -69,14 +92,15 @@ class CaseReviewSerializer(serializers.ModelSerializer):
             "microscopic_description",
             "histological_description",
             "staining_pattern",
-            "clinical_interpretation", 
-           ## Miscellaneous ##
+            "clinical_interpretation",
+            ## Miscellaneous ##
             "case_creator",
             "case_assistant",
         ]
         validators = [
             UniqueTogetherValidator(queryset=Case.objects.all(), fields=["institution_code", "order_number", "version"])
         ]
+
 
 # Update
 class CaseApprovalUpdateSerializer(serializers.ModelSerializer):
@@ -89,19 +113,18 @@ class CaseApprovalUpdateSerializer(serializers.ModelSerializer):
         model = Approval
         fields = ["id", "case", "consultant", "approval", "text"]
 
+
 # Details #
 class CaseDetailsSerializer(serializers.ModelSerializer):
     case_editor = UserSerializer(read_only=True, many=False)
     case_consultants = UserSerializer(read_only=True, many=True)
-    
+
     case_creator = UserSerializer(read_only=True, many=False)
     case_assistant = UserSerializer(read_only=True, many=False)
     case_approvals = CaseApprovalUpdateSerializer(read_only=True, many=True)
 
     institution = serializers.SerializerMethodField()
     case_code = serializers.SerializerMethodField()
-
-
 
     class Meta:
         model = Case
@@ -173,6 +196,7 @@ class CaseCreatorUpdateSerializer(serializers.ModelSerializer):
             "case_consultants",
         ]
 
+
 # Editor
 class CaseEditorUpdateSerializer(serializers.ModelSerializer):
     class Meta:
@@ -196,7 +220,7 @@ class CaseEditorUpdateSerializer(serializers.ModelSerializer):
             "microscopic_description",
             "histological_description",
             "staining_pattern",
-            "clinical_interpretation", 
+            "clinical_interpretation",
         ]
 
 
@@ -209,6 +233,22 @@ class CaseApprovalCreateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Approval
         fields = ["case", "consultant", "approval", "text"]
+
+
+### Case Archive ###
+class CaseArchiveCreateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = CaseArchive
+        fields = ["name"]
+
+
+class CaseArchiveListSerializer(serializers.ModelSerializer):
+    cases = CaseDetailsSerializer(read_only=True, many=True)
+
+    class Meta:
+        model = CaseArchive
+        fields = ["cases", "name"]
+
 
 ### Case & Approval ###
 # List #
@@ -241,6 +281,7 @@ class CaseListSerializer(serializers.ModelSerializer):
             "case_editor",
             "case_consultants",
             "version",
+            "version_state",
             ## Report Data ##
             "date_of_report",
             "microscopic_description",

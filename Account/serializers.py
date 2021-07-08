@@ -13,14 +13,12 @@ class UserSerializer(serializers.ModelSerializer):
             "id",
             "first_name",
             "last_name",
-            "credentials_status",
         ]
-        depth=1
+        depth = 1
 
 
 class UserSerializerWithToken(UserSerializer):
-    token = serializers.SerializerMethodField(read_only=True)
-    credentials_status = serializers.ReadOnlyField()
+    # token = serializers.SerializerMethodField(read_only=True)
     application_rights = serializers.ReadOnlyField()
 
     class Meta:
@@ -30,8 +28,7 @@ class UserSerializerWithToken(UserSerializer):
             "email",
             "first_name",
             "last_name",
-            "credentials_status",
-            "token",
+            # "token",
             "application_rights",
         ]
 

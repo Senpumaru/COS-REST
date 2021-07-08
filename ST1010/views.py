@@ -1,6 +1,6 @@
 from uuid import uuid4
-from .models import ServiceUser
-from Account.serializers import UserSerializer
+from .models import Permission, ServiceUser
+from Account.serializers import UserSerializer, UserSerializerWithToken
 from django.db.models import Q
 from django.shortcuts import render
 from django_filters.rest_framework import DjangoFilterBackend
@@ -10,9 +10,11 @@ from rest_framework.response import Response
 from rest_framework import viewsets
 from rest_framework import status
 from django.http import FileResponse
-from ST1010.models import Approval, Case
+from ST1010.models import Approval, Case, CaseArchive
 from ST1010.serializers import (
-    CaseReviewSerializer,
+    CaseArchiveCreateSerializer,
+    CaseArchiveListSerializer,
+    CaseAddendumSerializer,
     CaseApprovalCreateSerializer,
     CaseEditorUpdateSerializer,
     CaseApprovalUpdateSerializer,
@@ -21,12 +23,13 @@ from ST1010.serializers import (
     CaseTransferSerializer,
     CaseCreatorUpdateSerializer,
     CaseListSerializer,
+    PermissionSerializer,
+    ProfileListSerializer,
 )
 from ST1010.filters import CaseFilter
 from Account.permissions import (
     AccessST1010,
 )
-
 
 from ST1010.permissions import (
     Guest,
@@ -43,6 +46,26 @@ from django.db import connection
 import pandas as pd
 from datetime import datetime
 
+### Permission ###
+class ProfileView(APIView):
+    # permission_classes = [AccessST1010]
+
+    def get(self, request, id, format=None):
+        permission = Permission.objects.get(user=id)
+        serializer_class = PermissionSerializer(permission, many=False)
+        return Response(serializer_class.data)
+
+
+class ProfilePathologistList(generics.ListAPIView):
+    queryset = Permission.objects.filter(pathologist=True)
+    serializer_class = ProfileListSerializer
+
+
+class ProfileConsultantList(generics.ListAPIView):
+    queryset = Permission.objects.filter(consultant=True)
+    serializer_class = ProfileListSerializer
+
+
 ### Case ###
 ## Create ##
 # CBV #
@@ -55,9 +78,19 @@ class CaseCreate(APIView):
 
     def post(self, request, format=None):
         data = request.data
+        # Create CASE ARCHIVE object
+        archive_data = {"name": str(data["institutionCode"]) + "-" + str(data["orderNumber"])}
+        caseArchiveSerializer = CaseArchiveCreateSerializer(data=archive_data)
+        if caseArchiveSerializer.is_valid():
+            caseArchive = caseArchiveSerializer.save()
+        else:
+            return Response(caseArchiveSerializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        # Create CASE object
         serialized_data = {}
 
         ## Insert data for serialization ##
+        serialized_data.update({"archive": caseArchive.id})
         data["dateRegistration"] = data["dateRegistration"].split("T")[0]
         serialized_data.update({"dateRegistration": data["dateRegistration"]})
         serialized_data.update({"institution_code": data["institutionCode"]})
@@ -72,15 +105,16 @@ class CaseCreate(APIView):
         serialized_data.update({"case_consultants": data["caseConsultants"]})
         ## Custom Data ##
         serialized_data.update({"version": 1.0})
-        serialized_data.update({"version_state": True})
+        serialized_data.update({"version_state": "In-progress"})
         ## Miscellaneous ##
         serialized_data.update({"case_creator": request.user.id})
 
         serializer_case = CaseCreateSerializer(data=serialized_data, many=False)
         if serializer_case.is_valid():
+
             case = serializer_case.save()
 
-            ## Create case approval instances ##
+            ## Create CASE APPROVAL objects ##
             if len(serialized_data["case_consultants"]) > 0:
                 for case_consultant in serialized_data["case_consultants"]:
                     case_approval_data = {
@@ -185,21 +219,26 @@ class CaseUpdate(APIView):
         creator = False
         editor = False
 
+        print(case_former_data)
+
         if case_former_data["case_editor"]:
             if user_data["id"] == case_former_data["case_editor"]["id"]:
                 editor = True
             else:
                 editor = False
-        elif case_former_data["case_creator"] or case_former_data["case_assistant"]:
-            if (
-                user_data["id"] == case_former_data["case_creator"]["id"]
-                or user_data["id"] == case_former_data["case_assistant"]["id"]
-            ):
+
+        if case_former_data["case_creator"]:
+            if user_data["id"] == case_former_data["case_creator"]["id"]:
+                creator = True
+            else:
+                creator = False
+        elif case_former_data["case_assistant"]:
+            if user_data["id"] == case_former_data["case_assistant"]["id"]:
                 creator = True
             else:
                 creator = False
         else:
-            creator = False
+            pass
 
         if creator == True:
             case_updated_serializer = CaseCreatorUpdateSerializer(case_former, data=serialized_data, many=False)
@@ -272,38 +311,71 @@ class CaseReview(APIView):
             editor = False
 
         ## Case Review ##
-
-        case_review.version_state = False
-        case_review.save()
-
-        consultants = data["case_consultants"]
-        data["case_consultants"] = []
-        data["version"] = float(data["version"]) + 1
-        data["version_state"] = True
-        data["case_creator"] = data["case_creator"]["id"]
-        if data["case_assistant"]:
-            data["case_assistant"] = data["case_assistant"]["id"]
-        data["case_editor"] = data["case_editor"]["id"]
-
-        case_blueprint_serializer = CaseReviewSerializer(data=data, many=False)
-        if case_blueprint_serializer.is_valid():
-            case_blueprint = case_blueprint_serializer.save()
-
-            ## Consultants approval instances - New
-            # for consultant in consultants:
-            #     case_approval_data = {"case": case_blueprint.id, "consultant": consultant["id"], "approval": True}
-            #     case_approval_serializer = CaseApprovalCreateSerializer(data=case_approval_data)
-            #     if case_approval_serializer.is_valid():
-            #         case_approval_serializer.save()
-            #     else:
-            #         return Response(case_approval_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-            return Response(case_blueprint_serializer.data, status=status.HTTP_201_CREATED)
+        # Verify current CASE-REPORT
+        if editor == True:
+            case_review.version_state = "Verified"
+            case_review.save()
+            return Response("Case Reviewed", status=status.HTTP_202_ACCEPTED)
         else:
-            return Response(case_blueprint_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"Detail": "Not permitted!"}, status=status.HTTP_400_BAD_REQUEST)
 
 
-## Archive ##
-class CaseArchive(APIView):
+## Addendum ##
+class CaseAddendum(APIView):
+    permission_classes = [AccessST1010]
+
+    def put(self, request, uuid, format=None):
+        case_origin = Case.objects.get(uuid=uuid)
+
+        data = CaseDetailsSerializer(case_origin).data
+
+        # Check USER credentials #
+        user_serializer = UserSerializer(request.user)
+        user_data = user_serializer.data
+        if user_data["id"] == case_origin.case_editor.id:
+            editor = True
+        else:
+            editor = False
+
+        # CASE Addendum #
+        if editor == True:
+            case_origin.version_state = "Obsolete"
+            case_origin.save()
+
+            # Create CASE (new Version)
+            former_consultants = data["case_consultants"]
+            former_consultants_id = [user["id"] for user in former_consultants]
+            print(former_consultants_id)
+
+            data["case_creator"] = data["case_creator"]["id"]
+            if data["case_assistant"]:
+                data["case_assistant"] = data["case_assistant"]["id"]
+            data["case_editor"] = data["case_editor"]["id"]
+            data["case_consultants"] = former_consultants_id
+            data["version"] = float(data["version"]) + 1
+            data["version_state"] = "In-progress"
+
+            case_new_version_serializer = CaseAddendumSerializer(data=data, many=False)
+            if case_new_version_serializer.is_valid():
+                case_new_version = case_new_version_serializer.save()
+
+                # Refresh APPROVAL instances
+                for consultant_id in former_consultants_id:
+                    case_approval_data = {"case": case_new_version.id, "consultant": consultant_id}
+                    case_approval_serializer = CaseApprovalCreateSerializer(data=case_approval_data)
+                    if case_approval_serializer.is_valid():
+                        case_approval_serializer.save()
+                    else:
+                        return Response(case_approval_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+                    return Response(case_new_version_serializer.data, status=status.HTTP_201_CREATED)
+            else:
+                return Response(case_new_version_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        else:
+            return Response({"Detail": "Not permitted!"}, status=status.HTTP_400_BAD_REQUEST)
+
+
+### Archive ###
+class CaseArchiveList(generics.ListAPIView):
     # permission_classes = [AccessST1010]
 
     def get(self, request, code, number, format=None):
@@ -323,7 +395,7 @@ class StandardResultsSetPagination(pagination.PageNumberPagination):
 # CBV
 class CaseListServer(generics.ListAPIView):
     permission_classes = [AccessST1010]
-    queryset = Case.objects.filter(version_state=True)
+    queryset = Case.objects.filter(Q(version_state="In-progress") | Q(version_state="Verified"))
     serializer_class = CaseListSerializer
     pagination_class = StandardResultsSetPagination
     filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
@@ -388,8 +460,8 @@ class CaseStatistics(APIView):
 
         cases = Case.objects.all()
         cases_count = cases.count()
-        cases_transfer_required = Case.objects.filter(case_creator__is_clinician=True).count()
-        cases_in_work = cases.filter(clinical_interpretation="Не указано").count()
+
+        cases_in_work = cases.filter(clinical_interpretation=None).count()
 
         ### Statistics ###
         ## All-Time

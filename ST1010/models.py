@@ -73,6 +73,27 @@ class Permission(models.Model):
         return credential_stati
 
 
+class CaseArchive(models.Model):
+    id = models.BigAutoField(primary_key=True)
+    uuid = models.UUIDField(
+        unique=True,
+        default=uuid.uuid4,
+        editable=False,
+        null=True,
+        blank=False,
+    )
+    name = models.CharField(
+        unique=True,
+        max_length=50,
+        null=True,
+        blank=False,
+    )
+
+    class Meta:
+        db_table = "ST1010 Case Archive"
+        verbose_name_plural = "ST1010 Case Archives"
+
+
 class Case(models.Model):
     id = models.BigAutoField(primary_key=True)
 
@@ -83,7 +104,13 @@ class Case(models.Model):
         null=True,
         blank=False,
     )
-
+    archive = models.ForeignKey(
+        to="CaseArchive",
+        related_name="cases",
+        on_delete=models.CASCADE,
+        null=True,
+        blank=False,
+    )
     ### Case Data ###
     ## Registration Data ##
     date_of_registration = models.DateField(
@@ -162,18 +189,7 @@ class Case(models.Model):
         default=[],
         blank=True,
     )
-    version = models.DecimalField(
-        decimal_places=2,
-        max_digits=5,
-        null=True,
-        blank=True,
-    )
-    STATE_CHOICES = [(True, "In-production"), (False, "Reviewed")]
-    version_state = models.BooleanField(
-        choices=STATE_CHOICES,
-        null=True,
-        blank=False,
-    )
+
     ## Report Data ##
     date_of_report = models.DateField(
         null=True,
@@ -233,6 +249,19 @@ class Case(models.Model):
         related_name="case_assistant",
         null=True,
         blank=True,
+    )
+    version = models.DecimalField(
+        decimal_places=2,
+        max_digits=5,
+        null=True,
+        blank=True,
+    )
+    VERSION_STATE_CHOICES = [("In-progress", "In-progress"), ("Verified", "Verified"), ("Obsolete", "Obsolete")]
+    version_state = models.CharField(
+        choices=VERSION_STATE_CHOICES,
+        max_length=20,
+        null=True,
+        blank=False,
     )
     date_created = models.DateField(
         verbose_name="Date created",

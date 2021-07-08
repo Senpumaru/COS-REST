@@ -54,10 +54,10 @@ class ServiceUser(AbstractUser):
         default=False,
         help_text="Gives access to ST1010 application.",
     )
-    ST0002_allow = models.BooleanField(
+    ST1011_allow = models.BooleanField(
         verbose_name="Application for IHC:PDL1 cases",
         default=False,
-        help_text="Gives access to ST0002 application.",
+        help_text="Gives access to ST1011 application.",
     )
 
     ## Frontend Specific Rights ##
@@ -70,7 +70,7 @@ class ServiceUser(AbstractUser):
         }
         if self.ST1010_allow == True:
             apps["ST1010"] = True
-        if self.ST0002_allow == True:
+        if self.ST1011_allow == True:
             apps["ST1011"] = True
         return apps
 
