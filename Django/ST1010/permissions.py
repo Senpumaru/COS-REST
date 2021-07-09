@@ -11,7 +11,7 @@ class Guest(permissions.BasePermission):
     message = "Guests can only browse data!"
 
     def has_permission(self, request, view):
-        if request.method in SAFE_METHODS or request.user and request.user.is_guest:
+        if request.method in SAFE_METHODS or request.user and request.user.ST1010_Permission.guest:
             return True
         return False
 
@@ -28,7 +28,7 @@ class Registrar(permissions.BasePermission):
 
     def has_permission(self, request, view):
 
-        if request.method in EXPANDED_METHODS or request.user and request.user.is_registrar:
+        if request.method in EXPANDED_METHODS or request.user and request.user.ST1010_Permission.registrar:
             return True
         return False
 
@@ -41,7 +41,7 @@ class Consultant(permissions.BasePermission):
     message = "You require minimal Consultant persmissions!"
 
     def has_permission(self, request, view):
-        if request.method in SAFE_METHODS or request.user and request.user.is_consultant:
+        if request.method in SAFE_METHODS or request.user and request.user.ST1010_Permission.consultant:
             return True
         return False
 
@@ -55,7 +55,7 @@ class Clinician(permissions.BasePermission):
 
     def has_permission(self, request, view):
         print("Clinician Check.")
-        return bool(request.user and request.user.is_clinician)
+        return bool(request.user and request.user.ST1010_Permission.clinician)
 
 
 class Pathologist(permissions.BasePermission):
@@ -67,4 +67,4 @@ class Pathologist(permissions.BasePermission):
 
     def has_permission(self, request, view):
         print("Pathologist Check.")
-        return bool(request.user and request.user.is_pathologist)
+        return bool(request.user and request.user.ST1010_Permission.pathologist)

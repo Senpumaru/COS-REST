@@ -9,7 +9,7 @@ from rest_framework import viewsets
 from rest_framework import status
 from django.http import FileResponse
 from ST1010.models import Approval, Case, CaseArchive
-from Account.models import ST1010_Permission
+from Account.models import ST1010_Permission, ServiceUser
 from ST1010.serializers import (
     CaseArchiveCreateSerializer,
     CaseArchiveListSerializer,
@@ -232,12 +232,11 @@ class CaseUpdate(APIView):
             if user_data["id"] == case_former_data["case_creator"]["id"]:
                 creator = True
             else:
-                creator = False
-        elif case_former_data["case_assistant"]:
-            if user_data["id"] == case_former_data["case_assistant"]["id"]:
-                creator = True
-            else:
-                creator = False
+                if case_former_data["case_assistant"]:
+                    if user_data["id"] == case_former_data["case_assistant"]["id"]:
+                        creator = True
+                    else:
+                        creator = False
         else:
             pass
 
