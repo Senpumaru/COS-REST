@@ -345,7 +345,6 @@ class CaseAddendum(APIView):
             # Create CASE (new Version)
             former_consultants = data["case_consultants"]
             former_consultants_id = [user["id"] for user in former_consultants]
-            print(former_consultants_id)
 
             data["case_creator"] = data["case_creator"]["id"]
             if data["case_assistant"]:

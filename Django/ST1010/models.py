@@ -105,7 +105,7 @@ class Case(models.Model):
     )
     diagnosis = models.CharField(
         verbose_name="Diagnosis",
-        max_length=500,
+        max_length=200,
         null=True,
         blank=True,
     )

@@ -15,4 +15,6 @@ urlpatterns = [
     path("profile/", views.GetUserProfile.as_view(), name="Profile-Details"),
     path("profile/update/", views.updateUserProfile, name="Profile-Update"),
     path("userByName", views.UserViewSetByName.as_view(), name="userByName"),
+    ### Menu ###
+    path("Menu/", views.MenuView.as_view(), name="Menu"),
 ]

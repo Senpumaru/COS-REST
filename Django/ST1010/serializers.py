@@ -69,7 +69,7 @@ class CaseAddendumSerializer(serializers.ModelSerializer):
     class Meta:
         model = Case
         fields = [
-            "case_archive",
+            "archive",
             ## Registration Data ##
             "date_of_registration",
             "institution_code",

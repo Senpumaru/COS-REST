@@ -1,6 +1,7 @@
 from django.contrib.auth.hashers import make_password
 from django.http import JsonResponse
 from django.shortcuts import render
+from django.views.generic.base import TemplateView
 from rest_framework import authentication, permissions, status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAdminUser, IsAuthenticated
@@ -80,8 +81,6 @@ def deleteUser(request, pk):
 
 ### User - Profile Rights ###
 # FBV
-
-
 @api_view(["POST"])
 def registerUser(request):
 
@@ -111,8 +110,6 @@ def getUserProfile(request):
 
 
 # Search User
-
-
 class UserViewSetByName(generics.ListAPIView):
     queryset = ServiceUser.objects.all()
     serializer_class = UserSerializer
@@ -167,8 +164,6 @@ def updateUserProfile(request):
 
 
 # CBV
-
-
 class GetUserProfile(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
@@ -176,3 +171,9 @@ class GetUserProfile(APIView):
         user = request.user
         serializer = UserSerializer(user, many=False)
         return Response(serializer.data)
+
+
+## Main Menu
+class MenuView(TemplateView):
+    template_name = "Account/Account.html"
+    model = ServiceUser
