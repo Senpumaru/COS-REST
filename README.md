@@ -1,4 +1,4 @@
 # COS (Centralized Oncology Services) - Backend
 ## Backend - REST API
 
-Backend: Django Rest Framework
+REST API: Django Rest Framework
